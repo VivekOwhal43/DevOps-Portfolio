@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  web:
+    build: ./app
+    ports:
+      - "5000:5000"
+    environment:
+      # These variables are injected directly into app.py
+      - DB_HOST=db
+      - DB_NAME=taskdb
+      - DB_USER=devops
+      - DB_PASS=supersecret
+    depends_on:
+      - db
+
+  db:
+    # Use the official lightweight PostgreSQL image
+    image: postgres:13-alpine
+    environment:
+      - POSTGRES_DB=taskdb
+      - POSTGRES_USER=devops
+      - POSTGRES_PASSWORD=supersecret
+    ports:
+      - "5432:5432"
+    volumes:
+      # This ensures database data survives even if the container is destroyed
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
