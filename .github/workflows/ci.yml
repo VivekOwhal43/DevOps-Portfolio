@@ -3,7 +3,8 @@ name: Continuous Integration
 # 1. Trigger the workflow on pushes or pull requests to the main branch.
 on:
   push:
-    - main
+    branches:
+      - main
   pull_request:
     branches:
       - main
