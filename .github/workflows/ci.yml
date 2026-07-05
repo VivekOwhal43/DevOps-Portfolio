@@ -15,9 +15,8 @@ jobs:
     # Use a standard ubuntu runner provided by GitHub
     runs-on: ubuntu-latest
 
-    Steps:
+    steps:
       # Step A: Download your repository's code into the runner
-
       - name: Checkout Code
         uses: actions/checkout@v3
 
