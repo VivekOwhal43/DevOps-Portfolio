@@ -6,7 +6,7 @@ on:
     - main
   pull_request:
     branches:
-      -main
+      - main
 
 # 2. Define Jobs to Run
 
