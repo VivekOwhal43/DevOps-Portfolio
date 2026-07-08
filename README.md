@@ -9,7 +9,6 @@ We have created a sample Flask application with in memory database that executes
 We updated the application by containerzing it and adding the requirements.txt for installing the required dependencies in the app antomatically.
 
 ## Branch day3
-
 ### Day 3:
 
 Multi-Container Orchestration with Docker Compose.
@@ -61,7 +60,7 @@ Copy and paste this code into your ci.yml file:
 YAML
 name: Continuous Integration
 
-# 1. Trigger the workflow on pushes or pull requests to the main branch
+#### 1. Trigger the workflow on pushes or pull requests to the main branch
 on:
   push:
     branches:
@@ -70,7 +69,7 @@ on:
     branches:
       - main
 
-# 2. Define the jobs to run
+#### 2. Define the jobs to run
 jobs:
   test-python-code:
     # Use a standard Ubuntu runner provided by GitHub
@@ -241,3 +240,141 @@ git commit -m "Day 6: Add Docker build and push to pipeline"
 git push origin main
 
 Navigate to the Actions tab on your GitHub repository. You will see your pipeline running the new Docker steps. Once it turns green, log into Docker Hub in your web browser. You will see a brand new task-api repository containing the Docker image that GitHub built for you entirely hands-free.
+
+## Branch: Introduction_to_Kubernetes
+
+Welcome to Day 7: Launching Your Local Cloud and Kubernetes Secrets.
+
+While Docker Compose was great for running containers on a single laptop, it cannot scale across hundreds of servers. Kubernetes (K8s) is the industry standard for managing containers across massive clusters of machines. It automatically replaces crashed containers, scales them up when traffic spikes, and routes network requests.
+
+Today, you will boot up your local Kubernetes cluster using the minikube tool we installed on Day 1, and you will learn how Kubernetes handles sensitive passwords.
+
+## Branch: Deploying_Stateful_Database_Using_Kubernetes
+
+### Day 8: Deploying the Stateful Database.
+In Docker Compose, you ran a database container and attached a local volume to it. In Kubernetes, the process is similar but broken down into highly specific, robust components. Today, we will deploy your PostgreSQL database into the cluster.
+
+Because databases hold persistent data (stateful), we cannot just spin up a pod and hope for the best. If a database pod crashes, Kubernetes will recreate it, but all the data will be lost unless we specifically request permanent storage.
+
+To do this, we will write a single YAML file that contains three distinct Kubernetes objects separated by ---
+
+Step 1: Write the Database Manifest
+In VS Code, create a new file named postgres.yaml inside your k8s/ folder.
+
+Copy and paste this complete configuration:
+
+YAML
+#### 1. THE STORAGE: Request a permanent hard drive for the database
+
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+
+```
+#### 2. THE DEPLOYMENT: The actual database container
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:13-alpine
+          ports:
+            - containerPort: 5432
+          # Pull the passwords from the Secret we created on Day 7
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_DB
+          # Attach the storage we requested above
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+---
+```
+#### 3. THE SERVICE: The internal network address for the database
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+Save the file.
+```
+
+Step 2: Understand the Architecture
+Before running it, it is crucial to understand what you just built as a DevOps engineer:
+
+PersistentVolumeClaim (PVC): You are asking Kubernetes to carve out 1 Gigabyte of permanent storage from your laptop's hard drive.
+
+Deployment: You are telling Kubernetes to run exactly one instance (replicas: 1) of PostgreSQL. Notice how we do not hardcode the passwords here; we tell it to fetch them dynamically from the db-credentials Secret you made yesterday!
+
+Service: This is the most magical part of Kubernetes networking. By naming this Service db, Kubernetes creates an internal DNS record. When your Python app looks for a database host named db, Kubernetes will automatically route that traffic to this exact pod.
+
+Step 3: Apply and Verify
+Open your Ubuntu terminal and tell Kubernetes to build this infrastructure:
+
+```
+Bash
+kubectl apply -f k8s/postgres.yaml
+```
+
+Now, check the status of your new database pod. It might take a minute to pull the PostgreSQL image and start up:
+```
+Bash
+kubectl get pods
+```
+
+You are looking for a pod named something like postgres-deployment-xxxxxx-xxxx with a status of Running and 1/1 in the Ready column.
+
+Step 4: Save Your Progress
+
+```
+Bash
+git add k8s/postgres.yaml
+git commit -m "Day 8: Deploy PostgreSQL with persistent storage and service"
+git push origin main
+```
