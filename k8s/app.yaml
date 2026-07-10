@@ -19,7 +19,7 @@ spec:
           image: vivekovhal/task-api:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8000
+            - containerPort: 5000
           env:
             # Tell the Python code to look for the database service named 'db'
             - name: DB_HOST
@@ -52,7 +52,7 @@ spec:
     app: task-api
   ports:
     - protocol: TCP
-      port: 8000        # The port the service listens on internally
-      targetPort: 8000  # The port inside the container
+      port: 5000        # The port the service listens on internally
+      targetPort: 5000  # The port inside the container
       nodePort: 30007   # The port opened on your local machine to access the app
 

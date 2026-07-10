@@ -378,3 +378,71 @@ git add k8s/postgres.yaml
 git commit -m "Day 8: Deploy PostgreSQL with persistent storage and service"
 git push origin main
 ```
+
+## Branch: Deploying_the_Stateless_Python_API
+### Day:9 Deploying the Stateless Python API.
+
+> Step 1: Write the Application Manifest
+
+* In VS Code, create a new file named app.yaml inside your k8s/ folder.
+* Copy and paste the following configuration:
+```yaml
+# 1. THE DEPLOYMENT: Running the Python API containers
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-deployment
+spec:
+  replicas: 2 # High Availability: Kubernetes will balance traffic between two identical copies
+  selector:
+    matchLabels:
+      app: task-api
+  template:
+    metadata:
+      labels:
+        app: task-api
+    spec:
+      containers:
+        - name: task-api
+          # REPLACE 'YOUR_DOCKERHUB_USERNAME' with your actual Docker Hub username
+          image: vivekovhal/task-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            # Tell the Python code to look for the database service named 'db'
+            - name: DB_HOST
+              value: "db"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_DB
+
+---
+# 2. THE SERVICE: Exposing the application to your local machine
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-service
+spec:
+  type: NodePort  # Exposes the service on a specific port of the cluster node
+  selector:
+    app: task-api
+  ports:
+    - protocol: TCP
+      port: 5000        # The port the service listens on internally
+      targetPort: 5000  # The port inside the container
+      nodePort: 30007   # The port opened on your local machine to access the app
+
+```
