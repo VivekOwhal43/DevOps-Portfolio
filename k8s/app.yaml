@@ -39,6 +39,23 @@ spec:
                 secretKeyRef:
                   name: db-credentials
                   key: POSTGRES_DB
+        
+        # New Probe Configuration to make the applicatoin more resilient.
+          livenessProbe:
+            httpGet:
+              path: /tasks
+              port: 5000
+            initialDelaySeconds: 15       # Wait 15 seconds before the first check to let the app boot up
+            periodSeconds: 10             # Check every 10 seconds
+            failureThreshold: 3           # Restart the container if it fails 3 times in a row
+          
+          readinessProbe:
+            httpGet:
+              path: /tasks
+              port: 5000
+            initialDelaySeconds: 5        # Start checking after 5 seconds
+            periodSeconds: 5              # Check every 5 seconds
+
 
 ---
 # 2. THE SERVICE: Exposing the application to your local machine
