@@ -57,10 +57,9 @@ A GitHub Actions workflow is written in YAML. It defines "triggers" (when to run
 
 Copy and paste this code into your ci.yml file:
 
-YAML
+```YAML
 name: Continuous Integration
-
-#### 1. Trigger the workflow on pushes or pull requests to the main branch
+# 1. Trigger the workflow on pushes or pull requests to the main branch
 on:
   push:
     branches:
@@ -69,7 +68,7 @@ on:
     branches:
       - main
 
-#### 2. Define the jobs to run
+# 2. Define the jobs to run
 jobs:
   test-python-code:
     # Use a standard Ubuntu runner provided by GitHub
@@ -98,7 +97,8 @@ jobs:
         run: |
           # Stop the build if there are Python syntax errors or undefined names
           flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
-Save the file.
+```
+* Save the file.
 
 * Step 3: Push to GitHub and Trigger the Pipeline
 Because our YAML file dictates that the pipeline runs on: push to main, simply pushing this new file to GitHub will trigger your very first automated run.
@@ -175,7 +175,7 @@ Open .github/workflows/ci.yml in VS Code.
 
 Add the Docker steps at the very bottom of the file. Your complete ci.yml must look exactly like this:
 
-YAML
+```YAML
 name: Continuous Integration
 
 on:
@@ -229,7 +229,9 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/task-api:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/task-api:${{ github.sha }}
-Save the file.
+```
+
+* Save the file.
 
 * Step 4: Trigger the Automation
 In your Ubuntu terminal, commit and push these changes to GitHub:
@@ -243,7 +245,7 @@ Navigate to the Actions tab on your GitHub repository. You will see your pipelin
 
 ## Branch: Introduction_to_Kubernetes
 
-Welcome to Day 7: Launching Your Local Cloud and Kubernetes Secrets.
+### Day 7: Launching Your Local Cloud and Kubernetes Secrets.
 
 While Docker Compose was great for running containers on a single laptop, it cannot scale across hundreds of servers. Kubernetes (K8s) is the industry standard for managing containers across massive clusters of machines. It automatically replaces crashed containers, scales them up when traffic spikes, and routes network requests.
 
@@ -258,15 +260,16 @@ Because databases hold persistent data (stateful), we cannot just spin up a pod 
 
 To do this, we will write a single YAML file that contains three distinct Kubernetes objects separated by ---
 
-Step 1: Write the Database Manifest
+> Step 1: Write the Database Manifest
 In VS Code, create a new file named postgres.yaml inside your k8s/ folder.
 
 Copy and paste this complete configuration:
 
 YAML
-#### 1. THE STORAGE: Request a permanent hard drive for the database
 
-```
+
+```yaml
+# 1. THE STORAGE: Request a permanent hard drive for the database
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -280,9 +283,7 @@ spec:
 
 ---
 
-```
-#### 2. THE DEPLOYMENT: The actual database container
-```
+# 2. THE DEPLOYMENT: The actual database container
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -328,9 +329,9 @@ spec:
           persistentVolumeClaim:
             claimName: postgres-pvc
 ---
-```
+
 #### 3. THE SERVICE: The internal network address for the database
-```
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -345,35 +346,38 @@ spec:
 Save the file.
 ```
 
-Step 2: Understand the Architecture
-Before running it, it is crucial to understand what you just built as a DevOps engineer:
+> Step 2: Understand the Architecture
 
-PersistentVolumeClaim (PVC): You are asking Kubernetes to carve out 1 Gigabyte of permanent storage from your laptop's hard drive.
+* Before running it, it is crucial to understand what you just built as a DevOps engineer:
 
-Deployment: You are telling Kubernetes to run exactly one instance (replicas: 1) of PostgreSQL. Notice how we do not hardcode the passwords here; we tell it to fetch them dynamically from the db-credentials Secret you made yesterday!
+* PersistentVolumeClaim (PVC): You are asking Kubernetes to carve out 1 Gigabyte of permanent storage from
+  your laptop's hard drive.
+
+* Deployment: You are telling Kubernetes to run exactly one instance (replicas: 1) of PostgreSQL. Notice
+  how we do not hardcode the passwords here; we tell it to fetch them dynamically from the db-credentials Secret you made yesterday!
 
 Service: This is the most magical part of Kubernetes networking. By naming this Service db, Kubernetes creates an internal DNS record. When your Python app looks for a database host named db, Kubernetes will automatically route that traffic to this exact pod.
 
-Step 3: Apply and Verify
-Open your Ubuntu terminal and tell Kubernetes to build this infrastructure:
+> Step 3: Apply and Verify
+  
+  * Open your Ubuntu terminal and tell Kubernetes to build this infrastructure:
 
-```
-Bash
+```bash
 kubectl apply -f k8s/postgres.yaml
 ```
 
-Now, check the status of your new database pod. It might take a minute to pull the PostgreSQL image and start up:
-```
-Bash
+  * Now, check the status of your new database pod. It might take a minute to pull the PostgreSQL image and start up:
+
+```bash
 kubectl get pods
 ```
 
-You are looking for a pod named something like postgres-deployment-xxxxxx-xxxx with a status of Running and 1/1 in the Ready column.
+  * You are looking for a pod named something like postgres-deployment-xxxxxx-xxxx with a status of Running
+    and 1/1 in the Ready column.
 
-Step 4: Save Your Progress
+> Step 4: Save Your Progress
 
-```
-Bash
+```bash
 git add k8s/postgres.yaml
 git commit -m "Day 8: Deploy PostgreSQL with persistent storage and service"
 git push origin main
@@ -384,8 +388,9 @@ git push origin main
 
 > Step 1: Write the Application Manifest
 
-* In VS Code, create a new file named app.yaml inside your k8s/ folder.
-* Copy and paste the following configuration:
+  * In VS Code, create a new file named app.yaml inside your k8s/ folder.
+  * Copy and paste the following configuration:
+
 ```yaml
 # 1. THE DEPLOYMENT: Running the Python API containers
 apiVersion: apps/v1
@@ -446,3 +451,287 @@ spec:
       nodePort: 30007   # The port opened on your local machine to access the app
 
 ```
+<details>
+<summary> Tip </summary>
+
+* Crucial: Edit line 18 and replace YOUR_DOCKERHUB_USERNAME with your exact Docker Hub username so Kubernetes knows where to find your image.
+
+* Save the file.
+</details>
+
+> Step 2: Apply the Manifest to Your Cluster
+
+  * Open your Ubuntu terminal and deploy the application:
+
+```bash
+kubectl apply -f k8s/app.yaml
+```
+> Step 3: Verify the Deployment
+
+* Check to see if your application pods are spinning up successfully. Because we set replicas: 2, you
+  should see two separate application pods running simultaneously:
+
+```bash
+kubectl get pods
+```
+* Give it a moment to change from `ContainrCreating` to `Running`
+
+> Step 4: Access the Application in Your Browser
+
+  * Because Minikube runs inside an isolated virtual layer, your local browser cannot access
+    `localhost:30007` directly yet. Minikube provides a built-in shortcut command to bridge this gap and open the app automatically.
+
+  * Run this command in your terminal:
+
+```bash
+minikube service app-service
+```
+
+> [!CAUTION]
+
+> After executing 'kubectl get pods' if you observe error like:
+
+```bash
+NAME                           READY     STATUS    RESTARTS        AGE
+
+app-deployment-67d577f574-9hdgg 0/1 CrashLoopBackOff 5 (5m20s ago) 3h59m
+app-deployment-67d577f574-l9h99 0/1 CrashLoopBackOff 5 (5m15s ago) 3h59m
+postgres-deployment-8675f4fdd4-zpv6r 1/1 Running 0 27h
+```
+
+> ## CrshLoopBackOff ERROR
+Welcome to the real world of Kubernetes! CrashLoopBackOff is arguably the most famous error in DevOps.
+
+First, the good news: your postgres-deployment is Running perfectly (1/1).
+
+The CrashLoopBackOff status on your app-deployment means that Kubernetes is successfully pulling your Docker image and starting the container, but the Python application inside is crashing immediately. Kuberentes sees the crash, restarts the container, it crashes again, and Kubernetes eventually backs off, increasing the time between restarts.
+
+* Step 1: The Golden Rule of DevOps Debugging
+  Whenever a pod crashes, the very first thing a DevOps engineer does is check the logs to see exactly what the application was complaining about right before it died.
+  
+  Run this command to peek inside the crashing container:
+  ```bash
+  kubectl logs deploy/app-deployment
+  ```
+  You will likely see a Python traceback ending with: Exception: Database connection failed.
+
+  ### The Root Cause: Mismatched Environment Variables
+  If you look closely at the app.py code we wrote on Day 3, your Python application specifically looks for environment variables named DB_USER, DB_PASS, and DB_NAME to connect to the database.
+  
+  However, in the app.yaml file from yesterday, we passed the variables into the container using the names POSTGRES_USER, POSTGRES_PASSWORD, and POSTGRES_DB.
+  
+  Because the names do not match, Python cannot find the passwords. It defaults to trying to use standard empty credentials, gets rejected by the PostgreSQL database, and crashes.
+
+* Step 2: Fix the Application Manifest
+  We need to map the keys from our Kubernetes Secret to the exact variable names your Python app expects.
+
+  - Open k8s/app.yaml in VS Code. Scroll down to the env: section inside the Deployment.
+
+  - Update the names so they match DB_USER, DB_PASS, and DB_NAME. Your updated env block
+    should look exactly like this:
+    ```yaml
+    env:
+            - name: DB_HOST
+              value: "db"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_DB
+    ```
+
+* Step 3: Apply the Fix
+  Push the updated configuration to your cluster. Kubernetes is smart enough to realize the environment variables changed, and it will automatically terminate the crashing pods and spin up fresh ones.
+  
+```bash
+  kubectl apply -f k8s/app.yaml
+```
+* Step 4: Verify the Recovery
+  Watch the pods to see them transition from CrashLoopBackOff to Running:
+```Bash
+kubectl get pods -w
+```
+> [!TIP]
+
+> (Note: The -w flag means "watch". It will stream live updates to your terminal. Press Ctrl +C to stop watching once you see 1/1 Running).
+
+> Once they are running, you can use minikube service app-service to open the fully functional application in your browser!
+
+## Branch: Liveness_and_Readiness_Probes
+### Day 10: Resiliency and Self-Healing (Liveness & Readiness Probes).
+
+You have already experienced a CrashLoopBackOff firsthand. Kubernetes handled that automatically by trying to restart the broken container. However, what happens if an application doesn't crash, but completely freezes or gets stuck in an infinite loop? To Kubernetes, the container looks perfectly fine from the outside, but it will return errors to real users.
+
+To solve this, production environments use Probes. These are health checks that Kubernetes performs periodically to inspect the inner health of your application.
+
+* There are two main types of probes:
+
+  > Readiness Probe: Checks if the container is ready to accept internet traffic. If it fails, Kubernetes stops routing users to this specific pod so they never see an error page.
+
+  > Liveness Probe: Checks if the container is still alive. If it fails, Kubernetes assumes the app is frozen and forcefully terminates and replaces it.
+
+* Here is how to make your Python application completely resilient.
+
+* Step 1: Add Health Checks to Your Manifest
+  - We need to tell Kubernetes exactly how to probe our Flask application. Since Flask runs a web server, we can instruct Kubernetes to send an HTTP request to our /tasks endpoint every few seconds. If the app responds with a successful status code (like 200), it is healthy.
+
+  - Open k8s/app.yaml in VS Code.
+
+  - Update the containers block to add the livenessProbe and readinessProbe specifications at the bottom. Your updated file must look exactly like this:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: task-api
+  template:
+    metadata:
+      labels:
+        app: task-api
+    spec:
+      containers:
+        - name: task-api
+          image: YOUR_DOCKERHUB_USERNAME/task-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            - name: DB_HOST
+              value: "db"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_DB
+          
+          # --- NEW PROBE CONFIGURATION BELOW ---
+          livenessProbe:
+            httpGet:
+              path: /tasks
+              port: 5000
+            initialDelaySeconds: 15  # Wait 15 seconds before the first check to let the app boot up
+            periodSeconds: 10        # Check every 10 seconds
+            failureThreshold: 3      # Restart the container if it fails 3 times in a row
+
+          readinessProbe:
+            httpGet:
+              path: /tasks
+              port: 5000
+            initialDelaySeconds: 5   # Start checking after 5 seconds
+            periodSeconds: 5         # Check every 5 seconds
+```
+
+* Step 2: Apply the Resiliency Rules
+  Go to your Ubuntu terminal and apply the changes:
+
+```bash
+  kubectl apply -f k8s/app.yaml
+```
+  Kubernetes will perform a rolling update, gracefully terminating the old unprotected pods and rolling out the new self-healing pods.
+
+* Step 3: Observe the Health Checks
+  To see the probes in action, ask Kubernetes to describe one of your active application pods:
+
+```bash
+kubectl describe deploy/app-deployment
+ ```
+
+  Scroll down to the container details in the terminal output. You will see specific lines documenting your active Liveness and Readiness rules.
+
+  To help you master how these two parameters interact during real-world cloud outages, use the simulator below. You can tweak the timing thresholds and watch exactly how Kubernetes decides whether to reroute user traffic or completely kill a failing container.
+
+  ## Branch: Introduction_to_Terraform
+  ### Day 11: Introduction to Terraform
+
+  Here, we are going to install Terraform into your Linux environment and write your very first cloud infrastructure code. We will target AWS (Amazon Web Services), the most popular cloud provider in the world.
+
+* Step 1: Install Terraform inside Ubuntu
+We need to download the HashiCorp (the makers of Terraform) security keys and add them to your Ubuntu package manager so we can install the tool securely.
+
+Open your Ubuntu terminal and run these commands one by one:
+```bash
+# 1. Download HashiCorp's security key
+wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+# 2. Add the official Terraform repository to your system
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+# 3. Update your package lists and install Terraform
+sudo apt update && sudo apt install terraform -y
+```
+
+* Step 2: Create Your Infrastructure Folder
+Just like we created a k8s/ folder for Kubernetes, we need a dedicated place for our Terraform code.
+
+1. Ensure you are in the root of your project (~/devops-portfolio).
+
+2. Run this command to create a new directory:
+
+```bash
+mkdir terraform
+```
+3. Open your project in VS Code (code .).
+
+* Step 3: Write Your First Terraform Manifest
+Terraform files end in .tf. We are going to write a main.tf file that tells Terraform we want to connect to AWS, and that we want to provision a specific type of cloud server (an EC2 instance).
+
+1. Inside the new terraform/ folder, create a file named main.tf.
+
+2. Copy and paste the following code:
+
+```Terraform
+# 1. Tell Terraform which cloud provider we are using
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+# 2. Configure the AWS Provider (We will use the US East region)
+provider "aws" {
+  region = "us-east-1"
+}
+
+# 3. Define the actual cloud resource (A free-tier Linux server)
+resource "aws_instance" "production_server" {
+  ami           = "ami-0c7217cdde317cfec" # This is the ID for a standard Ubuntu server on AWS
+  instance_type = "t2.micro"              # This size is covered by the AWS Free Tier
+
+  tags = {
+    Name = "DevOps-Portfolio-Server"
+  }
+}
+```
+* Step 4: Initialize Terraform
+  Before Terraform can build this server, it needs to download the specific AWS plugins. This is very similar to running git init or npm install.
+
+1. In your Ubuntu terminal, navigate into your terraform folder: 'cd terraform'
+2. Initialize the working directory: 'terraform init'
+
